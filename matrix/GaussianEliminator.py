@@ -1,4 +1,4 @@
-from multiprocessing import Pool, Array
+from multiprocessing import Pool
 from typing import List, Tuple, Callable, Iterable
 
 import numpy as np
@@ -7,9 +7,8 @@ multipool: "Pool" = None
 
 
 def enableMultiprocessing(pool: 'Pool'):
-    raise NotImplementedError("Multiprocessing is not supported at this time.")
-    # global multipool
-    # multipool = pool
+    global multipool
+    multipool = pool
 
 
 class ThreadBlock:
@@ -36,12 +35,12 @@ def _scale_and_subtract_rows(matrix: 'np.ndarray', row1: int, row2: int, scale: 
         matrix[row2] = matrix[row2] - (matrix[row1] * scale)
     else:
         matrix[row2] = (matrix[row2] * scale) - matrix[row1]
-    return matrix
+    return matrix[row2], row2
 
 
 def _scale_row(matrix: 'np.ndarray', row: int, scale: float):
     matrix[row] = matrix[row] * scale
-    return matrix
+    return matrix[row], row
 
 
 def _swap_nonzero(matrix: 'np.ndarray', start_row: int, col: int):
@@ -60,11 +59,16 @@ def execute_history(history: List['ThreadBlock'], matrix: 'np.ndarray', use_mult
         raise ValueError("Multiprocessing has not been enabled for gaussian elimination. "
                          "Did you call enableMultiprocessing?")
     for curr_block in history:
+        async_results = []
         for call, args in curr_block.history:
-            if not use_multiprocessing:
+            if not use_multiprocessing or len(curr_block.history) == 1:
                 call(matrix, *args)
             else:
-                multipool.apply_async(call, (Array(np.float64, matrix), *args))
+                async_results.append(multipool.apply_async(call, (matrix, *args)))
+        if use_multiprocessing and len(curr_block.history) > 1:
+            for async_res in async_results:
+                result = async_res.get()
+                matrix[result[1]] = result[0]
 
 
 def _forward_eliminate(matrix: 'np.ndarray', use_multiprocessing: bool = False):
