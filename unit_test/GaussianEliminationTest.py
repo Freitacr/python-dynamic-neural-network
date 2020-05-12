@@ -11,7 +11,7 @@ class GaussianEliminationTest(unittest.TestCase):
     def test_SwapZeroColumn(self):
         test_arr = np.array([[0, 1, 0], [1, 0, 0], [0, 0, 0]], float)
         arr_cpy = test_arr.copy()
-        res = ge._swap_nonzero(arr_cpy, 0, 0)
+        res = ge.swap_nonzero(arr_cpy, 0, 0)
         self.assertTrue(res is not None)
         self.assertTrue(isinstance(res, tuple))
         self.assertTrue(len(res) == 2)
