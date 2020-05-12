@@ -61,8 +61,8 @@ class LinearEquationSolverTest(unittest.TestCase):
         test_mat = np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]], float)
         res_mat = np.array([[14, 32, 50], [32, 77, 122], [50, 122, 194]], float)
         multiplicand = mms.solveEquation(test_mat, res_mat)
-        np.around(multiplicand, 14)
         mul_res = test_mat @ multiplicand
+        mul_res = np.around(mul_res, 5)  # rounding is necessary due to floating point arithmetic inaccuracies
         self.assertTrue(np.array_equiv(res_mat, mul_res))
 
 

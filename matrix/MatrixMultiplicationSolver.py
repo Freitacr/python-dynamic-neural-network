@@ -73,7 +73,7 @@ def solveEquation(original_matrix: 'np.ndarray', resulting_matrix: 'np.ndarray',
                   multiprocessing_pool: "Pool" = None):
     use_multiprocessing = multiprocessing_pool is not None
     if use_multiprocessing:
-        ge.enableMultiprocessing(Pool)
+        ge.enableMultiprocessing(multiprocessing_pool)
 
     # If we have a known change history, then assume original matrix is in gauss eliminated form
     operating_history = known_history
