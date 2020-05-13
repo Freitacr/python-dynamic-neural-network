@@ -79,7 +79,11 @@ def solveEquation(original_matrix: 'np.ndarray', resulting_matrix: 'np.ndarray',
     operating_history = known_history
     working_original_matrix = original_matrix.copy()
     working_resulting_matrix = resulting_matrix.copy()
-
+    orig_max = np.max(working_original_matrix)
+    resulting_max = np.max(working_resulting_matrix)
+    div = max(orig_max, resulting_max)
+    working_original_matrix /= div
+    working_resulting_matrix /= div
     # If matrix multiplication is on the left, assume that the arguments are passed in transposed already
 
     if operating_history is None:
