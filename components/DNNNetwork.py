@@ -1,5 +1,5 @@
 from random import randint
-from typing import List, Tuple
+from typing import List, Tuple, Set
 
 from numpy import array_equiv
 from numpy import ndarray
@@ -36,6 +36,7 @@ class DynamicNeuralNetwork:
         self.input_nodes: List['DNNInputNode'] = []
         self.output_nodes: List['DNNOutputNode'] = []
         self.active_nodes: List['DNNNode'] = []
+        self.active_nodes_set: Set['DNNNode'] = set()
         self.__construct_network()
 
     @staticmethod
@@ -149,6 +150,7 @@ class DynamicNeuralNetwork:
                                  )
             in_node.add_input_data(in_data)
             self.active_nodes.append(in_node)
+            self.active_nodes_set.add(in_node)
 
     def extract_output_data(self):
         ret_outputs: List['ndarray'] = []
@@ -159,15 +161,66 @@ class DynamicNeuralNetwork:
     def propagate_inputs(self):
         while not len(self.active_nodes) == 0:
             curr_node = self.active_nodes.pop(0)
+            self.active_nodes_set.remove(curr_node)
             curr_node.transmit_data()
             for connection in curr_node.outgoing_connections:
                 if not isinstance(connection.node_out, DNNOutputNode):
+                    if connection.node_out in self.active_nodes_set:
+                        continue
                     self.active_nodes.append(connection.node_out)
+                    self.active_nodes_set.add(connection.node_out)
 
     def perform_backpropagation(self, input_data: List['ndarray'], expected_outputs: List['ndarray']):
         self.add_input_data(input_data)
         self.propagate_inputs()
         outputs = self.extract_output_data()
         differences = [expected_outputs[i] - outputs[i] for i in range(len(expected_outputs))]
-        # todo implement random element updating to do extremely basic learning
+        self.clear_incoming_messages()
+
+        for i in range(len(differences)):
+            self.output_nodes[i].outgoing_buffer.contents = differences[i]
+            self.output_nodes[i].receive_incoming_message(self.output_nodes[i].outgoing_buffer)
+            self.output_nodes[i].outgoing_buffer = None
+            self.active_nodes.append(self.output_nodes[i])
+            self.active_nodes_set.add(self.active_nodes[-1])
+        while not len(self.active_nodes) == 0:
+            curr_node = self.active_nodes.pop(0)
+            self.active_nodes_set.remove(curr_node)
+            curr_node.transmit_error()
+            for connection in curr_node.incoming_connections:
+                if not isinstance(connection.node_in, DNNInputNode):
+                    if connection.node_in in self.active_nodes_set:
+                        continue
+                    self.active_nodes.append(connection.node_in)
+                    self.active_nodes_set.add(connection.node_in)
+        self.clear_incoming_messages()
+        self.update_weights()
         pass
+
+    def clear_incoming_messages(self):
+        for in_node in self.input_nodes:
+            self.active_nodes.append(in_node)
+            self.active_nodes_set.add(in_node)
+        while len(self.active_nodes) > 0:
+            curr_node = self.active_nodes.pop(0)
+            self.active_nodes_set.remove(curr_node)
+            curr_node.incoming_messages.clear()
+            for connection in curr_node.outgoing_connections:
+                if connection.node_out in self.active_nodes_set:
+                    continue
+                self.active_nodes.append(connection.node_out)
+                self.active_nodes_set.add(connection.node_out)
+
+    def update_weights(self):
+        for in_node in self.input_nodes:
+            self.active_nodes.append(in_node)
+            self.active_nodes_set.add(in_node)
+        while len(self.active_nodes) > 0:
+            curr_node = self.active_nodes.pop(0)
+            self.active_nodes_set.remove(curr_node)
+            for connection in curr_node.outgoing_connections:
+                connection.update_weights()
+                if connection.node_out in self.active_nodes_set:
+                    continue
+                self.active_nodes.append(connection.node_out)
+                self.active_nodes_set.add(connection.node_out)

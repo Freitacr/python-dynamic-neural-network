@@ -3,7 +3,13 @@ from typing import Tuple, List
 import numpy as np
 
 from components.DNNMessage import DNNMessage
+from components.DNNMessageHistory import DNNMessageHistory
 from components.DNNNodeConnection import DNNConnection
+
+
+class TransmissionError(ValueError):
+    def __init__(self, message):
+        super().__init__(message)
 
 
 class DNNNode:
@@ -41,4 +47,28 @@ class DNNNode:
             self.combine_incoming_messages()
         for out_connection in self.outgoing_connections:
             out_connection.perform_transmit()
-        pass
+        self.incoming_messages.clear()
+        self.outgoing_buffer = None
+
+    def transmit_error(self):
+        if len(self.incoming_messages) == 0:
+            raise TransmissionError("Cannot transmit error, no errors ready for transmittal")
+        for msg in self.incoming_messages:
+            msg_history = msg.message_history
+            last_entry = msg_history.last()
+            if last_entry is None:
+                raise ValueError("Message's history was empty, this should not happen")
+            elif isinstance(last_entry, tuple):
+                last_entry[0].perform_err_transmit(msg)
+            elif isinstance(last_entry, list):
+                err_contents = msg.contents / len(last_entry)
+                for hist in last_entry:
+                    hist: "DNNMessageHistory" = hist
+                    err_msg = DNNMessage(err_contents.copy())
+                    err_msg.message_history = hist
+                    last_connection: "DNNConnection" = hist.last()[0]
+                    last_connection.perform_err_transmit(err_msg)
+            else:
+                raise ValueError("Unrecognized entry in message history " + str(last_entry))
+        self.incoming_messages.clear()
+        self.outgoing_buffer = None

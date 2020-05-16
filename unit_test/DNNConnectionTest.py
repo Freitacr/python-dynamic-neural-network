@@ -1,7 +1,9 @@
 import unittest
-from components.DNNNode import DNNNode
-from components.DNNInputNode import DNNInputNode
+
 import numpy as np
+
+from components.DNNInputNode import DNNInputNode
+from components.DNNNode import DNNNode
 
 
 class DNNConnectionTest(unittest.TestCase):
@@ -42,7 +44,7 @@ class DNNConnectionTest(unittest.TestCase):
         self.assertTrue(
             eq_res.all()
         )
-        self.assertEqual(transmitted_data.message_history.contained_history[0], inspected_connection)
+        self.assertEqual(transmitted_data.message_history.contained_history[0][0], inspected_connection)
 
     def test_transmit_differing_shapes(self):
         # create secondary internal node with a differing shape from self.internal_node
